@@ -18,9 +18,11 @@ xbdm.connect("192.168.1.7").then(resp => {
     xbdm.disconnect().then(console.log);
 }).catch((err) => {
     console.log(err);
-});```
+});
+```
 
 ## Installation
 
 ```js
-npm i xbdm.js```
+npm i xbdm.js
+```
