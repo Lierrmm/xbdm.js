@@ -19,20 +19,23 @@ function connect(ip) {
         });
     });
 }
+
 function sendCommand(command) {
     return new Promise((resolve, reject) => {
         promiseSocket.write(command + "\r\n").then(() => {
             i.on('line', function (line) {
-                if(!line.startsWith("202- mem")) resolve(line);
+                if (!line.startsWith("202- ")) resolve(line);
             });
         }).catch(err => {
             reject("Not Connected");
         });
     });
 }
+
 function setMemory(address, data) {
     sendCommand(`setmem addr=${address} data=${data}`).catch();
 }
+
 function disconnect() {
     return new Promise(resolve => {
         promiseSocket.destroy();
@@ -40,6 +43,7 @@ function disconnect() {
         resolve("died.");
     });
 }
+
 function getMemory(address, rlength, type = "hex") {
     return new Promise((resolve, reject) => {
         running ? timeout = timeout + 55 : timeout = timeout = 5;
@@ -52,6 +56,7 @@ function getMemory(address, rlength, type = "hex") {
         }, timeout);
     });
 }
+
 function getCPUKey() {
     return new Promise((resolve, reject) => {
         running ? timeout = timeout + 10 : timeout = timeout = 5;
@@ -63,6 +68,7 @@ function getCPUKey() {
         }, timeout);
     });
 }
+
 function getConsoleID() {
     return new Promise((resolve, reject) => {
         running ? timeout = timeout + 10 : timeout = timeout = 5;
@@ -75,6 +81,7 @@ function getConsoleID() {
         }, timeout);
     });
 }
+
 function xNotify(message, type = "default") {
     let command =
         "consolefeatures ver=2" +
@@ -103,11 +110,132 @@ function xNotify(message, type = "default") {
     }
     sendCommand(command).catch();
 }
+
 function screenshot() {
     sendCommand("Screenshot ").then((data) => {
         console.log(data);
         data = data.split('colorspace=0x0\r\n')[1];
         console.log(data);
+    });
+}
+
+function grabSysInfo(command) {
+    return new Promise((resolve) => {
+        promiseSocket.write(command + "\r\n").then((data) => {
+            promiseSocket.read().then(data => {
+                if (data.toString().startsWith("202- multiline")) {
+                    let _data = data.toString().replace("202- multiline response follows\r\n", "");
+                    _data = _data.split('\r\n');
+                    let obj = [];
+                    _data.forEach((item, i) => {
+                        obj.push(item);
+                        if (i == _data.length - 1) resolve(obj);
+                    });
+                }
+            });
+        });
+    });
+}
+/**
+ * Returns System Info - Error Prone
+ */
+function getSysInfo() {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            grabSysInfo("systeminfo").then(data => {
+                let obj = {
+                    "HDD": data[0].split("=")[1],
+                    "Type": data[1].split("=")[1],
+                    "Platform": data[2],
+                    "Kernal": data[3]
+                };
+                resolve(obj);
+            });
+        }, 1500);
+    });
+}
+
+function moduleList(command) {
+    return new Promise((resolve) => {
+        promiseSocket.write(command + "\r\n").then((data) => {
+            promiseSocket.read().then(data => {
+                console.log(data.toString());
+                if (data.toString().startsWith("202- multiline")) {
+                    let _data = data.toString().replace("202- multiline response follows\r\n", "");
+                    _data = _data.split('\r\n');
+                    let obj = [];
+                    _data.forEach((item, i) => {
+                        if (item.startsWith("name=") && obj.indexOf(item, 1) == -1) obj.push(item);
+                        if (i == _data.length - 1) resolve(obj);
+                    });
+                }
+            });
+        });
+    });
+}
+/**
+ * Returns Module List - PoC Do not use in prod - Error Prone
+ */
+function getModuleList() {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            moduleList("modules").then(data => {
+                let obj = {};
+                let _obj = [];
+                data.forEach(elem => {
+                    obj.name = elem.split('name=')[1].split('"')[1];
+                    obj.base = elem.split('base=')[1].split(" ")[0];
+                    obj.size = elem.split('size=')[1].split(" ")[0];
+                    obj.psize = elem.split('psize=')[1].split(" ")[0];
+                    _obj.push(obj);
+                    if (_obj.length === data.length) resolve(_obj);
+                });
+            });
+        }, 5000);
+    });
+}
+
+function PauseSystem() {
+    sendCommand("stop");
+}
+
+function unPauseSystem() {
+    sendCommand("go");
+}
+
+function shutdown() {
+    sendCommand("shutdown");
+}
+
+function setColor(color = "bluegray") {
+    sendCommand(`setcolor name=${color}`);
+}
+
+function sendfile(name, buffer, folder = "hdd") {
+    let length = buffer.length;
+    let hxlength = length.toString(16);
+    sendCommand(`sendfile name=${folder}:\\${name} length=0x${hxlength}`).then((data) => {
+        setTimeout(() => {
+            console.log("result", data);
+            promiseSocket.write(Buffer.from(buffer)).then((data) => {
+                console.log("Written bytes:", data);
+            });
+        }, 1600);
+    });
+}
+
+function coldReboot() {
+    sendCommand("magicboot  COLD").then(console.log);
+}
+
+function LaunchXEX(xexPath) {
+    return new Promise((resolve) => {
+        let directory = xexPath.substr(0, xexPath.lastIndexOf('\\') + 1);
+        setTimeout(() =>
+            sendCommand("magicboot title=\"" + xexPath + "\" directory=\"" + directory + "\"").then(data => {
+                console.log("resp", data);
+                resolve(`Launching ${directory}`);
+            }), 500);
     });
 }
 module.exports = {
@@ -119,5 +247,13 @@ module.exports = {
     getMemory: getMemory,
     getCPUKey: getCPUKey,
     disconnect: disconnect,
-    getConsoleID: getConsoleID
+    getConsoleID: getConsoleID,
+    getSysInfo: getSysInfo,
+    PauseSystem: PauseSystem,
+    unPauseSystem: unPauseSystem,
+    shutdown: shutdown,
+    setColor: setColor,
+    sendfile: sendfile,
+    coldReboot: coldReboot,
+    LaunchXEX: LaunchXEX
 };
