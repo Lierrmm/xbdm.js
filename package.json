@@ -1,9 +1,9 @@
 {
   "name": "xbdm.js",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Communicate with your modified Xbox 360 via sockets.",
   "main": "index.js",
-  "homepage": ""
+  "homepage": "https://github.com/Lierrmm/xbdm.js",
   "scripts": {},
   "keywords": [
     "xbdm",

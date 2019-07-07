@@ -2,9 +2,7 @@
 
 ## Introduction
 
-> Communicate with your modified Xbox 360 via sockets.
-
-> Handy for electron apps and JavaScript applications.
+> Communicate with your modified Xbox 360 via sockets. Handy for electron apps and JavaScript applications.
 
 ## Code Samples
 
