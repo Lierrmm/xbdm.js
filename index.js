@@ -3,12 +3,16 @@ const {
 } = require("promise-socket");
 const net = require('net');
 const rl = require('readline');
+const fs = require('fs');
+const bmpjs = require('bmp-js');
+const flip = require('./flipbytes');
 let connectedIp = '127.0.0.1';
 let socket = new net.Socket();
 const promiseSocket = new PromiseSocket(socket);
 let i = rl.createInterface(socket, socket);
 let timeout = 5;
 let running = false;
+socket.setNoDelay(true);
 
 function connect(ip) {
     return new Promise((resolve, reject) => {
@@ -111,11 +115,59 @@ function xNotify(message, type = "default") {
     sendCommand(command).catch();
 }
 
+function readStream(size) {
+    return new Promise((resolve, reject) => {
+        promiseSocket.read(size).then(data => {
+            resolve(data);
+        }).catch(reject);
+    });
+}
+
+function grabSSInfo(command) {
+    return new Promise((resolve, reject) => {
+        promiseSocket.write(command + "\r\n").then((data) => {
+            readStream().then(data => {
+                data = data.toString().split('\r\n')[1];
+                let obj = {
+                    pitch: parseInt(data.split('pitch=')[1].split(' ')[0],16),
+                    width: parseInt(data.split('width=')[1].split(' ')[0],16),
+                    height: parseInt(data.split('height=')[1].split(' ')[0],16),
+                    format: parseInt(data.split('format=')[1].split(' ')[0],16),
+                    offsetx: parseInt(data.split('offsetx=')[1].split(' ')[0],16),
+                    offsety: parseInt(data.split('offsety=')[1].split(' ')[0],16),
+                    framebuffersize: parseInt(data.split('framebuffersize=')[1].split(' ')[0], 16)
+                };
+                resolve(obj);
+            }).catch(reject);
+        });
+    });
+}
+
 function screenshot() {
-    sendCommand("Screenshot ").then((data) => {
-        console.log(data);
-        data = data.split('colorspace=0x0\r\n')[1];
-        console.log(data);
+    return new Promise(resolve => {
+        setTimeout(() => {
+            grabSSInfo("screenshot").then((data) => {
+                PauseSystem();
+                console.log(data);
+                let buf = new Buffer.alloc(data.framebuffersize);
+                readStream(buf).then(response => {
+                    let _data = response;
+                    let newData = flip.reorder(_data);
+                    console.log(newData.length);
+                    let bmpData = {
+                        width: data.width,
+                        height: data.height,
+                        data: newData
+                    };
+                    let bmpResult = bmpjs.encode(bmpData);
+                    unPauseSystem();
+                    fs.writeFile("screenshot.bmp", bmpResult.data, err => console.log(err));
+                    resolve("wrote image");
+                });
+            }).catch(() => {
+                unPauseSystem();
+            });
+        }, 1500);
     });
 }
 
@@ -233,11 +285,15 @@ function LaunchXEX(xexPath) {
         let directory = xexPath.substr(0, xexPath.lastIndexOf('\\') + 1);
         setTimeout(() =>
             sendCommand("magicboot title=\"" + xexPath + "\" directory=\"" + directory + "\"").then(data => {
-                console.log("resp", data);
                 resolve(`Launching ${directory}`);
             }), 500);
     });
 }
+
+function notImplemented() {
+    return "not implemented yet.";
+}
+
 module.exports = {
     ip: connectedIp,
     connect: connect,
@@ -255,5 +311,6 @@ module.exports = {
     setColor: setColor,
     sendfile: sendfile,
     coldReboot: coldReboot,
-    LaunchXEX: LaunchXEX
+    LaunchXEX: LaunchXEX,
+    screenshot: notImplemented
 };
