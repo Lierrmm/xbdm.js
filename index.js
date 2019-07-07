@@ -6,6 +6,9 @@ const rl = require('readline');
 const fs = require('fs');
 const bmpjs = require('bmp-js');
 const flip = require('./flipbytes');
+const axios = require("axios");
+axios.defaults.headers.get["content-type"] = "application/json";
+
 let connectedIp = '127.0.0.1';
 let socket = new net.Socket();
 const promiseSocket = new PromiseSocket(socket);
@@ -13,6 +16,7 @@ let i = rl.createInterface(socket, socket);
 let timeout = 5;
 let running = false;
 socket.setNoDelay(true);
+socket.setKeepAlive(true);
 
 function connect(ip) {
     return new Promise((resolve, reject) => {
@@ -115,7 +119,7 @@ function xNotify(message, type = "default") {
     sendCommand(command).catch();
 }
 
-function readStream(size) {
+function readStream(size = 0) {
     return new Promise((resolve, reject) => {
         promiseSocket.read(size).then(data => {
             resolve(data);
@@ -129,12 +133,12 @@ function grabSSInfo(command) {
             readStream().then(data => {
                 data = data.toString().split('\r\n')[1];
                 let obj = {
-                    pitch: parseInt(data.split('pitch=')[1].split(' ')[0],16),
-                    width: parseInt(data.split('width=')[1].split(' ')[0],16),
-                    height: parseInt(data.split('height=')[1].split(' ')[0],16),
-                    format: parseInt(data.split('format=')[1].split(' ')[0],16),
-                    offsetx: parseInt(data.split('offsetx=')[1].split(' ')[0],16),
-                    offsety: parseInt(data.split('offsety=')[1].split(' ')[0],16),
+                    pitch: parseInt(data.split('pitch=')[1].split(' ')[0], 16),
+                    width: parseInt(data.split('width=')[1].split(' ')[0], 16),
+                    height: parseInt(data.split('height=')[1].split(' ')[0], 16),
+                    format: parseInt(data.split('format=')[1].split(' ')[0], 16),
+                    offsetx: parseInt(data.split('offsetx=')[1].split(' ')[0], 16),
+                    offsety: parseInt(data.split('offsety=')[1].split(' ')[0], 16),
                     framebuffersize: parseInt(data.split('framebuffersize=')[1].split(' ')[0], 16)
                 };
                 resolve(obj);
@@ -294,6 +298,101 @@ function notImplemented() {
     return "not implemented yet.";
 }
 
+function hex2String(hexx) {
+    var hex = hexx.toString();
+    var str = '';
+    for (var i = 0;
+        (i < hex.length && hex.substr(i, 2) !== '00'); i += 2)
+        str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+    return str;
+}
+
+String.prototype.hexEncode = function () {
+    var hex, i;
+
+    var result = "";
+    for (i = 0; i < this.length; i++) {
+        hex = this.charCodeAt(i).toString(16);
+        result += ("000" + hex).slice(-4);
+    }
+
+    return result;
+}
+
+function getTitleID() {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            let command =
+                "consolefeatures ver=2" +
+                ' type=9 params="A\\0\\A\\2\\' +
+                2 +
+                "/" +
+                "xam.xex".length +
+                "\\" +
+                Buffer.from("xam.xex").toString("hex") +
+                "\\" +
+                1 +
+                "\\" +
+                "0x1CF" + '\\"';
+            sendCommand(command).then(data => {
+                console.log(data);
+                data = data.split("200- ")[1];
+                resolve(data);
+            });
+        }, 1500);
+    });
+}
+
+function getTitleInfo(titleId) {
+    return new Promise(resolve => {
+        axios.get(`http://xboxunity.net/Resources/Lib/TitleList.php?page=0&count=1&search=${titleId}&sort=3&direction=1&category=0&filter=0`).then((data) => {
+            resolve(data.data);
+        });
+    });
+}
+
+function getData(argument) {
+    let numArray = [];
+    let bytes = argument;
+    numArray.push(bytes);
+    return numArray;
+}
+
+function reverse(addr){
+    let _data;
+    let x = addr;
+    let y = x.toString(2);
+    let yl = y.length;
+    let mask = (Math.pow(2,yl)-1);
+    _data = ~x & mask;
+    return _data;
+}
+
+function titleIDv2() {
+    setTimeout(() => {
+    let bytes1 = Buffer.from("xam.xex").toString("hex");
+    getMemory(0x91C088AE, 4).then(data => {
+        let bufferAddr = parseInt(data, 16);
+        let stringPointer = bufferAddr + 1500;
+        setMemory(bufferAddr, 100);
+        setMemory(stringPointer, 100);
+        setMemory(stringPointer, bytes1);
+        let numArray = [stringPointer, 0];
+        stringPointer += "xam.xex".length + 1;
+        numArray[1] = 0x1CF;
+        let _data = getData(0x1CF);
+        setMemory(bufferAddr + 8, _data);
+        let bytes2 = parseInt(2181038081, 16).toString();
+        setMemory(bufferAddr, bytes2);
+        setTimeout(() => {
+            getMemory(bufferAddr+4092, 4).then((data) => {
+                console.log(data);
+            });
+        }, 1500);
+    });
+ }, 1500);
+}
+
 module.exports = {
     ip: connectedIp,
     connect: connect,
@@ -312,5 +411,7 @@ module.exports = {
     sendfile: sendfile,
     coldReboot: coldReboot,
     LaunchXEX: LaunchXEX,
-    screenshot: notImplemented
+    screenshot: notImplemented,
+    getTitleID: notImplemented,
+    getTitleInfo: getTitleInfo
 };
