@@ -1,0 +1,20 @@
+{
+  "name": "xbdm.js",
+  "version": "1.0.0",
+  "description": "Communicate with your modified Xbox 360 via sockets.",
+  "main": "index.js",
+  "homepage": ""
+  "scripts": {},
+  "keywords": [
+    "xbdm",
+    "xbox",
+    "sockets",
+    "remote",
+    "data"
+  ],
+  "author": "Liam",
+  "license": "MIT",
+  "dependencies": {
+    "promise-socket": "^5.0.0"
+  }
+}
