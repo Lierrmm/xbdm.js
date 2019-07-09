@@ -18,15 +18,21 @@ let running = false;
 socket.setNoDelay(true);
 socket.setKeepAlive(true);
 
-function connect(ip) {
+function connect(ip, port = 730) {
     return new Promise((resolve, reject) => {
-        promiseSocket.connect(730, ip).then((data) => {
+        promiseSocket.connect(port, ip).then((data) => {
+            console.log(data);
             resolve(true);
         }).catch((err) => {
             reject(err);
         });
     });
 }
+
+socket.on("data", (e)=>{
+    console.log(e.toString());
+    console.log(e);
+});
 
 function sendCommand(command) {
     return new Promise((resolve, reject) => {
