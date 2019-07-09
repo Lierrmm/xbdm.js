@@ -21,18 +21,12 @@ socket.setKeepAlive(true);
 function connect(ip, port = 730) {
     return new Promise((resolve, reject) => {
         promiseSocket.connect(port, ip).then((data) => {
-            console.log(data);
             resolve(true);
         }).catch((err) => {
             reject(err);
         });
     });
 }
-
-socket.on("data", (e)=>{
-    console.log(e.toString());
-    console.log(e);
-});
 
 function sendCommand(command) {
     return new Promise((resolve, reject) => {
