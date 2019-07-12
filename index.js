@@ -358,39 +358,67 @@ function getData(argument) {
     return numArray;
 }
 
-function reverse(addr){
+function reverse(addr) {
     let _data;
     let x = addr;
     let y = x.toString(2);
     let yl = y.length;
-    let mask = (Math.pow(2,yl)-1);
+    let mask = (Math.pow(2, yl) - 1);
     _data = ~x & mask;
     return _data;
 }
 
 function titleIDv2() {
     setTimeout(() => {
-    let bytes1 = Buffer.from("xam.xex").toString("hex");
-    getMemory(0x91C088AE, 4).then(data => {
-        let bufferAddr = parseInt(data, 16);
-        let stringPointer = bufferAddr + 1500;
-        setMemory(bufferAddr, 100);
-        setMemory(stringPointer, 100);
-        setMemory(stringPointer, bytes1);
-        let numArray = [stringPointer, 0];
-        stringPointer += "xam.xex".length + 1;
-        numArray[1] = 0x1CF;
-        let _data = getData(0x1CF);
-        setMemory(bufferAddr + 8, _data);
-        let bytes2 = parseInt(2181038081, 16).toString();
-        setMemory(bufferAddr, bytes2);
+        let bytes1 = Buffer.from("xam.xex").toString("hex");
+        getMemory(0x91C088AE, 4).then(data => {
+            let bufferAddr = parseInt(data, 16);
+            let stringPointer = bufferAddr + 1500;
+            setMemory(bufferAddr, 100);
+            setMemory(stringPointer, 100);
+            setMemory(stringPointer, bytes1);
+            let numArray = [stringPointer, 0];
+            stringPointer += "xam.xex".length + 1;
+            numArray[1] = 0x1CF;
+            let _data = getData(0x1CF);
+            setMemory(bufferAddr + 8, _data);
+            let bytes2 = parseInt(2181038081, 16).toString();
+            setMemory(bufferAddr, bytes2);
+            setTimeout(() => {
+                getMemory(bufferAddr + 4092, 4).then((data) => {
+                    console.log(data);
+                });
+            }, 1500);
+        });
+    }, 1500);
+}
+
+let Temperature = {
+    CPU: 0,
+    GPU: 1,
+    EDRAM: 2,
+    MotherBoard: 3
+};
+
+function getTemp(Temperature) {
+    return new Promise((resolve, reject) => {
         setTimeout(() => {
-            getMemory(bufferAddr+4092, 4).then((data) => {
-                console.log(data);
+            let command =
+                "consolefeatures ver=2" +
+                ' type=15 params="A\\0\\A\\2\\' +
+                1 +
+                "\\" +
+                Temperature +
+                '\\"';
+            promiseSocket.write(command + "\r\n").then((data) => {
+                promiseSocket.read().then(data => {
+                    let num = parseInt(data.toString().substr(4, data.length), 16);
+                    if (!isNaN(num)) resolve(num);
+                    else reject("Not A Number..");
+                });
             });
         }, 1500);
     });
- }, 1500);
 }
 
 module.exports = {
@@ -413,5 +441,7 @@ module.exports = {
     LaunchXEX: LaunchXEX,
     screenshot: notImplemented,
     getTitleID: notImplemented,
-    getTitleInfo: getTitleInfo
+    getTitleInfo: getTitleInfo,
+    Temperature: Temperature,
+    getTemp: getTemp
 };
