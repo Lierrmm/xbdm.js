@@ -18,6 +18,11 @@ let running = false;
 socket.setNoDelay(true);
 socket.setKeepAlive(true);
 
+/**
+ * Connect to target machine
+ * @param {string} ip 
+ * @param {number} port 
+ */
 function connect(ip, port = 730) {
     return new Promise((resolve, reject) => {
         promiseSocket.connect(port, ip).then((data) => {
@@ -28,6 +33,10 @@ function connect(ip, port = 730) {
     });
 }
 
+/**
+ * Send command to target machine
+ * @param {string} command 
+ */
 function sendCommand(command) {
     return new Promise((resolve, reject) => {
         promiseSocket.write(command + "\r\n").then(() => {
@@ -40,10 +49,18 @@ function sendCommand(command) {
     });
 }
 
+/**
+ * Set memory on the target machine
+ * @param {number} address 
+ * @param {number} data 
+ */
 function setMemory(address, data) {
     sendCommand(`setmem addr=${address} data=${data}`).catch();
 }
 
+/**
+ * Disconnect from target machine
+ */
 function disconnect() {
     return new Promise(resolve => {
         promiseSocket.destroy();
@@ -52,6 +69,12 @@ function disconnect() {
     });
 }
 
+/**
+ * Returns memory from target machine
+ * @param {number} address 
+ * @param {number} rlength 
+ * @param {string} type 
+ */
 function getMemory(address, rlength, type = "hex") {
     return new Promise((resolve, reject) => {
         running ? timeout = timeout + 55 : timeout = timeout = 5;
@@ -65,6 +88,9 @@ function getMemory(address, rlength, type = "hex") {
     });
 }
 
+/**
+ * Grab CPU Key from target machine
+ */
 function getCPUKey() {
     return new Promise((resolve, reject) => {
         running ? timeout = timeout + 10 : timeout = timeout = 5;
@@ -77,6 +103,9 @@ function getCPUKey() {
     });
 }
 
+/**
+ * Grab Console ID from target machine
+ */
 function getConsoleID() {
     return new Promise((resolve, reject) => {
         running ? timeout = timeout + 10 : timeout = timeout = 5;
@@ -90,6 +119,11 @@ function getConsoleID() {
     });
 }
 
+/**
+ * Send notification to target machine
+ * @param {string} message 
+ * @param {string} type 
+ */
 function xNotify(message, type = "default") {
     let command =
         "consolefeatures ver=2" +
@@ -119,6 +153,10 @@ function xNotify(message, type = "default") {
     sendCommand(command).catch();
 }
 
+/**
+ * Read response from target machine
+ * @param {number} size 
+ */
 function readStream(size = 0) {
     return new Promise((resolve, reject) => {
         promiseSocket.read(size).then(data => {
@@ -127,6 +165,10 @@ function readStream(size = 0) {
     });
 }
 
+/**
+ * Returns Screenshot data from target machine
+ * @param {string} command 
+ */
 function grabSSInfo(command) {
     return new Promise((resolve, reject) => {
         promiseSocket.write(command + "\r\n").then((data) => {
@@ -147,6 +189,9 @@ function grabSSInfo(command) {
     });
 }
 
+/**
+ * Screenshots the target machine
+ */
 function screenshot() {
     return new Promise(resolve => {
         setTimeout(() => {
@@ -175,6 +220,10 @@ function screenshot() {
     });
 }
 
+/**
+ * Returns system information from target machine
+ * @param {string} command 
+ */
 function grabSysInfo(command) {
     return new Promise((resolve) => {
         promiseSocket.write(command + "\r\n").then((data) => {
@@ -192,6 +241,7 @@ function grabSysInfo(command) {
         });
     });
 }
+
 /**
  * Returns System Info - Error Prone
  */
@@ -211,6 +261,10 @@ function getSysInfo() {
     });
 }
 
+/**
+ * Returns module list from target machine
+ * @param {string} command 
+ */
 function moduleList(command) {
     return new Promise((resolve) => {
         promiseSocket.write(command + "\r\n").then((data) => {
@@ -251,22 +305,42 @@ function getModuleList() {
     });
 }
 
+/**
+ * Pauses the target machine
+ */
 function PauseSystem() {
     sendCommand("stop");
 }
 
+/**
+ * Unpauses the target machine
+ */
 function unPauseSystem() {
     sendCommand("go");
 }
 
+/**
+ * Shutdown the target machine
+ */
 function shutdown() {
     sendCommand("shutdown");
 }
 
+
+/**
+ * Update color of target machine in Neighborhood
+ * @param {string} color 
+ */
 function setColor(color = "bluegray") {
     sendCommand(`setcolor name=${color}`);
 }
 
+/**
+ * Send file to target machine
+ * @param {string} name 
+ * @param {string} buffer 
+ * @param {string} folder 
+ */
 function sendfile(name, buffer, folder = "hdd") {
     let length = buffer.length;
     let hxlength = length.toString(16);
@@ -279,11 +353,17 @@ function sendfile(name, buffer, folder = "hdd") {
         }, 1600);
     });
 }
-
+/**
+ * Restart the target machine
+ */
 function coldReboot() {
     sendCommand("magicboot  COLD").then(console.log);
 }
 
+/**
+ * Launch XEX on target machine
+ * @param {string} xexPath 
+ */
 function LaunchXEX(xexPath) {
     return new Promise((resolve) => {
         let directory = xexPath.substr(0, xexPath.lastIndexOf('\\') + 1);
@@ -294,10 +374,17 @@ function LaunchXEX(xexPath) {
     });
 }
 
+/**
+ * Returns a not implemented message
+ */
 function notImplemented() {
     return "not implemented yet.";
 }
 
+/**
+ * Parses hex to string
+ * @param {number} hexx 
+ */
 function hex2String(hexx) {
     var hex = hexx.toString();
     var str = '';
@@ -309,16 +396,17 @@ function hex2String(hexx) {
 
 String.prototype.hexEncode = function () {
     var hex, i;
-
     var result = "";
     for (i = 0; i < this.length; i++) {
         hex = this.charCodeAt(i).toString(16);
         result += ("000" + hex).slice(-4);
     }
-
     return result;
-}
+};
 
+/**
+ * Grab title ID from target machine
+ */
 function getTitleID() {
     return new Promise((resolve) => {
         setTimeout(() => {
@@ -343,6 +431,10 @@ function getTitleID() {
     });
 }
 
+/**
+ * Get title information from title id
+ * @param {string} titleId 
+ */
 function getTitleInfo(titleId) {
     return new Promise(resolve => {
         axios.get(`http://xboxunity.net/Resources/Lib/TitleList.php?page=0&count=1&search=${titleId}&sort=3&direction=1&category=0&filter=0`).then((data) => {
@@ -351,6 +443,10 @@ function getTitleInfo(titleId) {
     });
 }
 
+/**
+ * return bytes as an array
+ * @param {string} argument 
+ */
 function getData(argument) {
     let numArray = [];
     let bytes = argument;
@@ -358,6 +454,10 @@ function getData(argument) {
     return numArray;
 }
 
+/**
+ * Reverse bytes
+ * @param {number} addr 
+ */
 function reverse(addr) {
     let _data;
     let x = addr;
@@ -368,6 +468,9 @@ function reverse(addr) {
     return _data;
 }
 
+/**
+ * Grab title ID from target machine
+ */
 function titleIDv2() {
     setTimeout(() => {
         let bytes1 = Buffer.from("xam.xex").toString("hex");
@@ -400,7 +503,11 @@ let Temperature = {
     MotherBoard: 3
 };
 
-function getTemp(Temperature) {
+/**
+ * Gets Temperature from target machine
+ * @param {Temperature} Temperature 
+ */
+function getTemp(Temperature = 0) {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
             let command =
